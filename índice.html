@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diario de Trading</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body{font-family:Arial;margin:0;padding:20px;background:#0f172a;color:#e5e7eb}
+.card{background:#1e293b;padding:15px;border-radius:10px;margin-bottom:20px}
+input,select{padding:6px;margin:4px;background:#0f172a;color:white;border:1px solid #334155;border-radius:6px}
+button{padding:8px 12px;border:none;border-radius:6px;background:#3b82f6;color:white;cursor:pointer}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{padding:8px;border-bottom:1px solid #334155;text-align:left}
+</style>
+</head>
+<body>
+
+<h1>📈 Diario de Trading</h1>
+
+<div class="card">
+<h2>Nueva operación</h2>
+
+<input id="ticker" placeholder="Ticker">
+<input id="shares" type="number" placeholder="Acciones">
+<input id="buyPrice" type="number" placeholder="Precio compra">
+<input id="sellPrice" type="number" placeholder="Precio venta (si cerrada)">
+
+<select id="currency">
+<option value="EUR">EUR</option>
+<option value="USD">USD</option>
+</select>
+
+<select id="buyReason">
+<option>Breakout</option>
+<option>Pullback</option>
+<option>Soporte</option>
+<option>Media móvil</option>
+<option>Otro</option>
+</select>
+
+<select id="sellReason">
+<option>Take Profit</option>
+<option>Stop Loss</option>
+<option>Señal contraria</option>
+<option>Gestión riesgo</option>
+<option>Otro</option>
+</select>
+
+<input id="stop" type="number" placeholder="Stop Loss">
+<input id="take" type="number" placeholder="Take Profit">
+
+<button onclick="addTrade()">Guardar trade</button>
+</div>
+
+<div class="card">
+<h2>📂 Cartera abierta</h2>
+<table id="openTable">
+<thead>
+<tr>
+<th>Ticker</th>
+<th>Acciones</th>
+<th>Precio</th>
+<th>Stop</th>
+<th>Take</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+
+<div class="card">
+<h2>✅ Operaciones cerradas</h2>
+<table id="closedTable">
+<thead>
+<tr>
+<th>Ticker</th>
+<th>Resultado €</th>
+<th>Motivo compra</th>
+<th>Motivo venta</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+
+<div class="card">
+<h2>📊 Estadísticas</h2>
+<p id="stats"></p>
+<canvas id="equityChart"></canvas>
+</div>
+
+<script>
+let trades = JSON.parse(localStorage.getItem('trades')||'[]')
+
+function save(){
+localStorage.setItem('trades',JSON.stringify(trades))
+render()
+}
+
+function addTrade(){
+const trade={
+ ticker:document.getElementById('ticker').value,
+ shares:Number(document.getElementById('shares').value),
+ buy:Number(document.getElementById('buyPrice').value),
+ sell:Number(document.getElementById('sellPrice').value)||null,
+ currency:document.getElementById('currency').value,
+ buyReason:document.getElementById('buyReason').value,
+ sellReason:document.getElementById('sellReason').value,
+ stop:Number(document.getElementById('stop').value),
+ take:Number(document.getElementById('take').value)
+}
+trades.push(trade)
+save()
+}
+
+function render(){
+const openBody=document.querySelector('#openTable tbody')
+const closedBody=document.querySelector('#closedTable tbody')
+openBody.innerHTML=''
+closedBody.innerHTML=''
+
+let equity=[]
+let total=0
+let wins=0
+
+trades.forEach(t=>{
+ if(!t.sell){
+ const row=`<tr><td>${t.ticker}</td><td>${t.shares}</td><td>${t.buy}</td><td>${t.stop}</td><td>${t.take}</td></tr>`
+ openBody.innerHTML+=row
+ }else{
+ const result=(t.sell-t.buy)*t.shares
+ total+=result
+ if(result>0)wins++
+ equity.push(total)
+ const row=`<tr><td>${t.ticker}</td><td>${result.toFixed(2)}</td><td>${t.buyReason}</td><td>${t.sellReason}</td></tr>`
+ closedBody.innerHTML+=row
+ }
+})
+
+const winrate=trades.length?((wins/trades.length)*100).toFixed(1):0
+
+document.getElementById('stats').innerHTML=`Trades: ${trades.length} | Winrate: ${winrate}% | Resultado: ${total.toFixed(2)}€`
+
+const ctx=document.getElementById('equityChart')
+new Chart(ctx,{type:'line',data:{labels:equity.map((_,i)=>i+1),datasets:[{label:'Equity',data:equity}]}})
+}
+
+render()
+</script>
+
+</body>
+</html>
